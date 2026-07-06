@@ -7,7 +7,7 @@ namespace ScratchTicketSim.Customer
     public enum CustomerState { Entering, WaitingInQueue, BeingServed, Leaving }
 
     /// <summary>
-    /// Kunden-KI: Bewegung, Losauswahl, Reaktion auf Gewinn/Verlust.
+    /// Kunden-KI für 3D Perspective: Bewegung, Losauswahl, Farbe, Reaktion.
     /// </summary>
     public class CustomerAI : MonoBehaviour
     {
@@ -19,7 +19,7 @@ namespace ScratchTicketSim.Customer
         private float _waitTimer;
 
         [Header("Bewegung")]
-        [SerializeField] private float moveSpeed = 2f;
+        [SerializeField] private float moveSpeed = 3f;
         private Vector3 _targetPosition;
 
         public CustomerState State { get; private set; } = CustomerState.Entering;
@@ -27,13 +27,36 @@ namespace ScratchTicketSim.Customer
         private ScratchTicketSim.Tickets.ScratchTicket _chosenTicket;
         private int _ticketsToBuy;
 
+        private Renderer _renderer;
+
         // ── Initialisierung ──────────────────────────────────────────────
+
+        private void Awake()
+        {
+            _renderer = GetComponentInChildren<Renderer>();
+        }
 
         public void Initialize(CustomerType type)
         {
             Type          = type;
             _ticketsToBuy = GetTicketCount();
             maxWaitTime   = GetPatience();
+            SetColor();
+        }
+
+        private void SetColor()
+        {
+            if (_renderer == null) return;
+            _renderer.material = new Material(_renderer.material);
+            _renderer.material.color = Type switch
+            {
+                CustomerType.Regular   => new Color(0.2f, 0.5f, 1.0f),   // Blau
+                CustomerType.Casual    => new Color(0.2f, 0.8f, 0.2f),   // Grün
+                CustomerType.Gambler   => new Color(1.0f, 0.2f, 0.2f),   // Rot
+                CustomerType.Impatient => new Color(1.0f, 0.9f, 0.0f),   // Gelb
+                CustomerType.VIP       => new Color(0.7f, 0.2f, 1.0f),   // Lila
+                _                      => Color.white
+            };
         }
 
         private void Update()
@@ -51,7 +74,8 @@ namespace ScratchTicketSim.Customer
 
         public void JoinQueue(Vector3 queuePosition)
         {
-            _targetPosition = queuePosition;
+            // Y-Position beibehalten damit Kunden auf dem Boden bleiben
+            _targetPosition = new Vector3(queuePosition.x, transform.position.y, queuePosition.z);
             State           = CustomerState.WaitingInQueue;
             _waitTimer      = maxWaitTime;
         }
@@ -89,7 +113,7 @@ namespace ScratchTicketSim.Customer
             Leave();
         }
 
-        // ── Reaktionen ──────────────────────────────────────────────────────
+        // ── Reaktionen ───────────────────────────────────────────────────
 
         public void ReactToResult(float prize)
         {
@@ -101,15 +125,25 @@ namespace ScratchTicketSim.Customer
                 Debug.Log($"[CustomerAI] {Type} freut sich – Gewinn: {prize:F2}€");
         }
 
-        // ── Bewegung ────────────────────────────────────────────────────────
+        // ── Bewegung (3D) ────────────────────────────────────���───────────
 
         private void MoveToTarget()
         {
-            if (Vector3.Distance(transform.position, _targetPosition) > 0.05f)
-                transform.position = Vector3.MoveTowards(transform.position, _targetPosition, moveSpeed * Time.deltaTime);
+            Vector3 flatTarget = new Vector3(_targetPosition.x, transform.position.y, _targetPosition.z);
+            float dist = Vector3.Distance(transform.position, flatTarget);
+
+            if (dist > 0.05f)
+            {
+                transform.position = Vector3.MoveTowards(transform.position, flatTarget, moveSpeed * Time.deltaTime);
+
+                // Kunde schaut in Bewegungsrichtung
+                Vector3 dir = (flatTarget - transform.position).normalized;
+                if (dir != Vector3.zero)
+                    transform.rotation = Quaternion.LookRotation(dir);
+            }
         }
 
-        // ── Verlassen ───────────────────────────────────────────────────────
+        // ── Verlassen ────────────────────────────────────────────────────
 
         public void Leave()
         {
@@ -124,7 +158,7 @@ namespace ScratchTicketSim.Customer
             Leave();
         }
 
-        // ── Hilfsmethoden ─────────────────────────────────────────────────
+        // ── Hilfsmethoden ────────────────────────────────────────────────
 
         private int GetTicketCount() => Type switch
         {
