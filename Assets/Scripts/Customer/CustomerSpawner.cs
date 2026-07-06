@@ -31,12 +31,16 @@ namespace ScratchTicketSim.Customer
 
         private void Start()
         {
+            // Listener registrieren falls GameManager später kommt
             if (GameManager.Instance != null)
             {
                 GameManager.Instance.OnDayStart.AddListener(StartSpawning);
                 GameManager.Instance.OnDayEnd.AddListener(StopSpawning);
-                StartSpawning();
             }
+
+            // Direkt starten – GameManager hat Start() bereits aufgerufen
+            // _spawning guard verhindert Doppelstart
+            StartSpawning();
         }
 
         private void OnDisable()
@@ -83,7 +87,12 @@ namespace ScratchTicketSim.Customer
 
             GameObject go = Instantiate(customerPrefab, spawnPoint.position, Quaternion.identity);
             CustomerAI ai = go.GetComponent<CustomerAI>();
-            if (ai == null) return;
+            if (ai == null)
+            {
+                Debug.LogWarning("[CustomerSpawner] CustomerAI fehlt auf dem Prefab!");
+                Destroy(go);
+                return;
+            }
 
             CustomerType type = GetRandomType();
             ai.Initialize(type);
@@ -94,7 +103,6 @@ namespace ScratchTicketSim.Customer
         public void AddToQueue(CustomerAI customer)
         {
             _queue.Add(customer);
-            // Erster Kunde → JoinQueue (setzt State), Rest → nur Position
             int index = _queue.Count - 1;
             Vector3 pos = queueStartPoint.position + Vector3.back * (index * queueSpacing);
             customer.JoinQueue(pos);
@@ -120,7 +128,6 @@ namespace ScratchTicketSim.Customer
             {
                 if (_queue[i] == null) continue;
                 Vector3 pos = queueStartPoint.position + Vector3.back * (i * queueSpacing);
-                // UpdateQueuePosition ändert den State NICHT
                 _queue[i].UpdateQueuePosition(pos);
             }
         }
