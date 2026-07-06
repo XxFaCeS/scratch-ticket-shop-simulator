@@ -3,7 +3,7 @@ using UnityEngine;
 
 namespace ScratchTicketSim.Customer
 {
-    public enum CustomerType { Regular, Gambler, Casual, VIP, Impatient }
+    public enum CustomerType  { Regular, Gambler, Casual, VIP, Impatient }
     public enum CustomerState { Entering, WaitingInQueue, BeingServed, Leaving }
 
     /// <summary>
@@ -31,7 +31,7 @@ namespace ScratchTicketSim.Customer
 
         public void Initialize(CustomerType type)
         {
-            Type = type;
+            Type          = type;
             _ticketsToBuy = GetTicketCount();
             maxWaitTime   = GetPatience();
         }
@@ -69,7 +69,6 @@ namespace ScratchTicketSim.Customer
             var available = Tickets.TicketManager.Instance.GetAvailableTickets();
             if (available.Count == 0) { Leave(); return; }
 
-            // VIP bevorzugt teure Lose, Casual nimmt das günstigste
             if (Type == CustomerType.VIP)
                 available.Sort((a, b) => b.Price.CompareTo(a.Price));
             else
@@ -90,7 +89,7 @@ namespace ScratchTicketSim.Customer
             Leave();
         }
 
-        // ── Reaktionen ───────────────────────────────────────────────────
+        // ── Reaktionen ──────────────────────────────────────────────────────
 
         public void ReactToResult(float prize)
         {
@@ -102,43 +101,46 @@ namespace ScratchTicketSim.Customer
                 Debug.Log($"[CustomerAI] {Type} freut sich – Gewinn: {prize:F2}€");
         }
 
-        // ── Bewegung & Verlassen ─────────────────────────────────────────
+        // ── Bewegung ────────────────────────────────────────────────────────
 
         private void MoveToTarget()
         {
-            transform.position = Vector3.MoveTowards(
-                transform.position, _targetPosition, moveSpeed * Time.deltaTime);
+            if (Vector3.Distance(transform.position, _targetPosition) > 0.05f)
+                transform.position = Vector3.MoveTowards(transform.position, _targetPosition, moveSpeed * Time.deltaTime);
         }
 
-        private void LeaveImpatient()
-        {
-            Debug.Log($"[CustomerAI] {Type} verlässt den Laden – zu lange gewartet!");
-            Leave();
-        }
+        // ── Verlassen ───────────────────────────────────────────────────────
 
         public void Leave()
         {
             State = CustomerState.Leaving;
-            _targetPosition = transform.position + Vector3.right * 10f;
-            Destroy(gameObject, 3f);
+            CustomerSpawner.Instance?.RemoveFromQueue(this);
+            Destroy(gameObject, 1f);
         }
 
-        // ── Hilfsmethoden ────────────────────────────────────────────────
+        private void LeaveImpatient()
+        {
+            Debug.Log($"[CustomerAI] {Type} ist ungeduldig und geht!");
+            Leave();
+        }
+
+        // ── Hilfsmethoden ─────────────────────────────────────────────────
 
         private int GetTicketCount() => Type switch
         {
-            CustomerType.Gambler  => Random.Range(5, 11),
-            CustomerType.VIP      => Random.Range(1, 4),
-            CustomerType.Casual   => 1,
-            _                     => Random.Range(1, 3)
+            CustomerType.Gambler  => UnityEngine.Random.Range(3, 6),
+            CustomerType.Casual   => UnityEngine.Random.Range(1, 3),
+            CustomerType.VIP      => UnityEngine.Random.Range(2, 4),
+            _                     => 1
         };
 
         private float GetPatience() => Type switch
         {
-            CustomerType.Impatient => Random.Range(5f,  15f),
-            CustomerType.Regular   => Random.Range(20f, 40f),
-            CustomerType.VIP       => Random.Range(30f, 60f),
-            _                      => Random.Range(15f, 30f)
+            CustomerType.Impatient => 10f,
+            CustomerType.Gambler   => 60f,
+            CustomerType.VIP       => 90f,
+            CustomerType.Casual    => 45f,
+            _                      => 30f
         };
     }
 }
