@@ -6,9 +6,6 @@ namespace ScratchTicketSim.Customer
     public enum CustomerType  { Regular, Gambler, Casual, VIP, Impatient }
     public enum CustomerState { Entering, WalkingToCounter, WaitingInQueue, BeingServed, Leaving }
 
-    /// <summary>
-    /// Kunden-KI für 3D Perspective: Bewegung, Losauswahl, Farbe, Reaktion.
-    /// </summary>
     public class CustomerAI : MonoBehaviour
     {
         [Header("Kunden-Typ")]
@@ -73,6 +70,19 @@ namespace ScratchTicketSim.Customer
 
         // ── Warteschlange ────────────────────────────────────────────────
 
+        /// <summary>Nur Position aktualisieren ohne State zu ändern.</summary>
+        public void UpdateQueuePosition(Vector3 queuePosition)
+        {
+            // Nur bewegen wenn nicht gerade bedient wird oder geht
+            if (State == CustomerState.BeingServed ||
+                State == CustomerState.WalkingToCounter ||
+                State == CustomerState.Leaving) return;
+
+            _targetPosition = new Vector3(queuePosition.x, transform.position.y, queuePosition.z);
+            _hasTarget = true;
+        }
+
+        /// <summary>Ersten Kunden in die Queue einreihen (setzt State).</summary>
         public void JoinQueue(Vector3 queuePosition)
         {
             _targetPosition = new Vector3(queuePosition.x, transform.position.y, queuePosition.z);
@@ -152,14 +162,10 @@ namespace ScratchTicketSim.Customer
             }
             else
             {
-                // Ziel erreicht
                 _hasTarget = false;
 
                 if (State == CustomerState.WalkingToCounter)
-                {
-                    // Am Counter angekommen → CashRegister informieren
                     CashRegister.Instance?.OnCustomerArrived(this);
-                }
             }
         }
 
@@ -167,6 +173,7 @@ namespace ScratchTicketSim.Customer
 
         public void Leave()
         {
+            if (State == CustomerState.Leaving) return;
             State = CustomerState.Leaving;
             _targetPosition = transform.position + Vector3.back * 8f;
             _hasTarget = true;

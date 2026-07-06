@@ -5,9 +5,6 @@ using ScratchTicketSim.Core;
 
 namespace ScratchTicketSim.Customer
 {
-    /// <summary>
-    /// Spawnt Kunden in regelmäßigen Abständen und verwaltet die Warteschlange.
-    /// </summary>
     public class CustomerSpawner : MonoBehaviour
     {
         public static CustomerSpawner Instance { get; private set; }
@@ -34,7 +31,6 @@ namespace ScratchTicketSim.Customer
 
         private void Start()
         {
-            // Falls GameManager bereits gestartet hat, direkt spawnen
             if (GameManager.Instance != null)
             {
                 GameManager.Instance.OnDayStart.AddListener(StartSpawning);
@@ -65,7 +61,6 @@ namespace ScratchTicketSim.Customer
 
         private IEnumerator SpawnLoop()
         {
-            // Ersten Kunden nach kurzer Verzögerung spawnen
             yield return new WaitForSeconds(2f);
 
             while (_spawning)
@@ -99,7 +94,11 @@ namespace ScratchTicketSim.Customer
         public void AddToQueue(CustomerAI customer)
         {
             _queue.Add(customer);
-            RefreshQueuePositions();
+            // Erster Kunde → JoinQueue (setzt State), Rest → nur Position
+            int index = _queue.Count - 1;
+            Vector3 pos = queueStartPoint.position + Vector3.back * (index * queueSpacing);
+            customer.JoinQueue(pos);
+
             if (_queue.Count == 1)
                 CashRegister.Instance?.ServeNextCustomer();
         }
@@ -121,7 +120,8 @@ namespace ScratchTicketSim.Customer
             {
                 if (_queue[i] == null) continue;
                 Vector3 pos = queueStartPoint.position + Vector3.back * (i * queueSpacing);
-                _queue[i].JoinQueue(pos);
+                // UpdateQueuePosition ändert den State NICHT
+                _queue[i].UpdateQueuePosition(pos);
             }
         }
 
