@@ -28,6 +28,7 @@ namespace ScratchTicketSim.Core
         {
             if (Instance != null && Instance != this) { Destroy(gameObject); return; }
             Instance = this;
+            transform.SetParent(null); // Ensure no child objects (e.g. Counter) are dragged into DontDestroyOnLoad
             DontDestroyOnLoad(gameObject);
         }
 
