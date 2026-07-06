@@ -1,3 +1,4 @@
+using System.Collections;
 using UnityEngine;
 
 namespace ScratchTicketSim.Customer
@@ -7,11 +8,16 @@ namespace ScratchTicketSim.Customer
     /// </summary>
     public class CashRegister : MonoBehaviour
     {
-        public static CashRegister Instance { get; private set; }
+        public static CashRegister Instance { get; private set; };
 
         [Header("Kassen-Einstellungen")]
         [SerializeField] private float serviceTimeSeconds = 2f;
+
+        [Header("Counter Position")]
+        [SerializeField] private Transform counterPoint; // Punkt vor dem Counter wo Kunde wartet
+
         private bool _isBusy = false;
+        private CustomerAI _currentCustomer = null;
 
         private void Awake()
         {
@@ -54,20 +60,37 @@ namespace ScratchTicketSim.Customer
             if (next == null) return;
 
             _isBusy = true;
-            next.BeServed();
-            Invoke(nameof(FinishService), serviceTimeSeconds);
+            _currentCustomer = next;
+
+            // Kunde zum Counter schicken
+            if (counterPoint != null)
+                next.WalkToCounter(counterPoint.position);
+            else
+                next.BeServed();
+
+            Debug.Log($"[CashRegister] Bediene Kunden: {next.Type}");
         }
 
-        // ── Interne Methoden ─────────────────────────────────────────────
-
-        private void FinishService()
+        /// <summary>Wird aufgerufen wenn Kunde am Counter angekommen ist.</summary>
+        public void OnCustomerArrived(CustomerAI customer)
         {
-            _isBusy = false;
+            if (customer != _currentCustomer) return;
+            customer.BeServed();
+            StartCoroutine(FinishServiceAfterDelay());
+        }
 
-            // Aktuellen Kunden aus der Schlange entfernen
-            CustomerAI served = CustomerSpawner.Instance?.GetNextCustomer();
-            if (served != null)
-                CustomerSpawner.Instance.RemoveFromQueue(served);
+        // ── Interne Methoden ──────────────────────────────────────────────
+
+        private IEnumerator FinishServiceAfterDelay()
+        {
+            yield return new WaitForSeconds(serviceTimeSeconds);
+            _isBusy = false;
+            _currentCustomer = null;
+
+            // Nächsten Kunden bedienen falls noch einer wartet
+            CustomerAI next = CustomerSpawner.Instance?.GetNextCustomer();
+            if (next != null)
+                ServeNextCustomer();
         }
     }
 }
