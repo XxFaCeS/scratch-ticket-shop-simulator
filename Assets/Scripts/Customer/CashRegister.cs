@@ -8,13 +8,13 @@ namespace ScratchTicketSim.Customer
     /// </summary>
     public class CashRegister : MonoBehaviour
     {
-        public static CashRegister Instance { get; private set; };
+        public static CashRegister Instance { get; private set; }
 
         [Header("Kassen-Einstellungen")]
         [SerializeField] private float serviceTimeSeconds = 2f;
 
         [Header("Counter Position")]
-        [SerializeField] private Transform counterPoint; // Punkt vor dem Counter wo Kunde wartet
+        [SerializeField] private Transform counterPoint;
 
         private bool _isBusy = false;
         private CustomerAI _currentCustomer = null;
@@ -32,18 +32,15 @@ namespace ScratchTicketSim.Customer
         {
             if (ticket == null || customer == null) return;
 
-            // Los aus Lager nehmen
             if (!Tickets.TicketManager.Instance.TakeTicket(ticket))
             {
                 customer.Leave();
                 return;
             }
 
-            // Provision gutschreiben
             Economy.EconomyManager.Instance.AddRevenue(ticket.Commission);
             Economy.EconomyManager.Instance.RegisterTicketSold();
 
-            // Gewinn berechnen & Kundenreaktion
             float prize = ticket.Roll();
             customer.ReactToResult(prize);
 
@@ -62,7 +59,6 @@ namespace ScratchTicketSim.Customer
             _isBusy = true;
             _currentCustomer = next;
 
-            // Kunde zum Counter schicken
             if (counterPoint != null)
                 next.WalkToCounter(counterPoint.position);
             else
@@ -79,7 +75,7 @@ namespace ScratchTicketSim.Customer
             StartCoroutine(FinishServiceAfterDelay());
         }
 
-        // ── Interne Methoden ──────────────────────────────────────────────
+        // ── Interne Methoden ─────────────────────────────────────────────
 
         private IEnumerator FinishServiceAfterDelay()
         {
@@ -87,7 +83,6 @@ namespace ScratchTicketSim.Customer
             _isBusy = false;
             _currentCustomer = null;
 
-            // Nächsten Kunden bedienen falls noch einer wartet
             CustomerAI next = CustomerSpawner.Instance?.GetNextCustomer();
             if (next != null)
                 ServeNextCustomer();
