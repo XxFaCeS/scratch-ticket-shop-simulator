@@ -32,22 +32,29 @@ namespace ScratchTicketSim.Customer
             Instance = this;
         }
 
-        private void OnEnable()
+        private void Start()
         {
-            Core.GameManager.Instance?.OnDayStart.AddListener(StartSpawning);
-            Core.GameManager.Instance?.OnDayEnd.AddListener(StopSpawning);
+            // Falls GameManager bereits gestartet hat, direkt spawnen
+            if (GameManager.Instance != null)
+            {
+                GameManager.Instance.OnDayStart.AddListener(StartSpawning);
+                GameManager.Instance.OnDayEnd.AddListener(StopSpawning);
+                StartSpawning();
+            }
         }
 
         private void OnDisable()
         {
-            Core.GameManager.Instance?.OnDayStart.RemoveListener(StartSpawning);
-            Core.GameManager.Instance?.OnDayEnd.RemoveListener(StopSpawning);
+            GameManager.Instance?.OnDayStart.RemoveListener(StartSpawning);
+            GameManager.Instance?.OnDayEnd.RemoveListener(StopSpawning);
         }
 
         public void StartSpawning()
         {
+            if (_spawning) return;
             _spawning = true;
             StartCoroutine(SpawnLoop());
+            Debug.Log("[CustomerSpawner] Spawning gestartet!");
         }
 
         public void StopSpawning()
@@ -58,19 +65,26 @@ namespace ScratchTicketSim.Customer
 
         private IEnumerator SpawnLoop()
         {
+            // Ersten Kunden nach kurzer Verzögerung spawnen
+            yield return new WaitForSeconds(2f);
+
             while (_spawning)
             {
-                float interval = Random.Range(spawnIntervalMin, spawnIntervalMax);
-                yield return new WaitForSeconds(interval);
-
                 if (_queue.Count < maxQueueSize)
                     SpawnCustomer();
+
+                float interval = Random.Range(spawnIntervalMin, spawnIntervalMax);
+                yield return new WaitForSeconds(interval);
             }
         }
 
         private void SpawnCustomer()
         {
-            if (customerPrefab == null || spawnPoint == null) return;
+            if (customerPrefab == null || spawnPoint == null)
+            {
+                Debug.LogWarning("[CustomerSpawner] customerPrefab oder spawnPoint nicht zugewiesen!");
+                return;
+            }
 
             GameObject go = Instantiate(customerPrefab, spawnPoint.position, Quaternion.identity);
             CustomerAI ai = go.GetComponent<CustomerAI>();
@@ -79,6 +93,7 @@ namespace ScratchTicketSim.Customer
             CustomerType type = GetRandomType();
             ai.Initialize(type);
             AddToQueue(ai);
+            Debug.Log($"[CustomerSpawner] Kunde gespawnt: {type}");
         }
 
         public void AddToQueue(CustomerAI customer)
@@ -105,7 +120,7 @@ namespace ScratchTicketSim.Customer
             for (int i = 0; i < _queue.Count; i++)
             {
                 if (_queue[i] == null) continue;
-                Vector3 pos = queueStartPoint.position + Vector3.right * (i * queueSpacing);
+                Vector3 pos = queueStartPoint.position + Vector3.back * (i * queueSpacing);
                 _queue[i].JoinQueue(pos);
             }
         }
