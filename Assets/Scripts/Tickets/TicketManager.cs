@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using ScratchTicketSim.Economy;
 
 namespace ScratchTicketSim.Tickets
 {
@@ -22,8 +23,6 @@ namespace ScratchTicketSim.Tickets
             Instance = this;
         }
 
-        // ── Öffentliche API ──────────────────────────────────────────────
-
         /// <summary>Gibt alle verfügbaren (auf Lager) Lostypen zurück.</summary>
         public List<ScratchTicket> GetAvailableTickets()
         {
@@ -40,10 +39,7 @@ namespace ScratchTicketSim.Tickets
             return entry?.Quantity ?? 0;
         }
 
-        /// <summary>
-        /// Nimmt ein Los aus dem Lager (beim Verkauf).
-        /// Gibt false zurück wenn nicht auf Lager.
-        /// </summary>
+        /// <summary>Nimmt ein Los aus dem Lager (beim Verkauf).</summary>
         public bool TakeTicket(ScratchTicket ticket)
         {
             var entry = stock.Find(s => s.Ticket == ticket);
@@ -60,7 +56,7 @@ namespace ScratchTicketSim.Tickets
         /// <summary>Bestellt neue Lose nach (kostet Geld).</summary>
         public bool RestockTicket(ScratchTicket ticket, int amount)
         {
-            float cost = ticket.Price * 0.95f * amount; // 95% des Verkaufspreises
+            float cost = ticket.Price * 0.95f * amount;
             if (!EconomyManager.Instance.Spend(cost))
                 return false;
 
@@ -74,8 +70,6 @@ namespace ScratchTicketSim.Tickets
             return true;
         }
 
-        // ── Interne Methoden ─────────────────────────────────────────────
-
         private void CheckLowStock(TicketStock entry)
         {
             if (entry.Quantity <= lowStockThreshold)
@@ -83,7 +77,6 @@ namespace ScratchTicketSim.Tickets
         }
     }
 
-    /// <summary>Lagerbestand-Eintrag für einen Lostyp.</summary>
     [System.Serializable]
     public class TicketStock
     {

@@ -34,17 +34,15 @@ namespace ScratchTicketSim.Customer
 
         private void OnEnable()
         {
-            GameManager.Instance?.OnDayStart.AddListener(StartSpawning);
-            GameManager.Instance?.OnDayEnd.AddListener(StopSpawning);
+            Core.GameManager.Instance?.OnDayStart.AddListener(StartSpawning);
+            Core.GameManager.Instance?.OnDayEnd.AddListener(StopSpawning);
         }
 
         private void OnDisable()
         {
-            GameManager.Instance?.OnDayStart.RemoveListener(StartSpawning);
-            GameManager.Instance?.OnDayEnd.RemoveListener(StopSpawning);
+            Core.GameManager.Instance?.OnDayStart.RemoveListener(StartSpawning);
+            Core.GameManager.Instance?.OnDayEnd.RemoveListener(StopSpawning);
         }
-
-        // ── Spawn-Steuerung ──────────────────────────────────────────────
 
         public void StartSpawning()
         {
@@ -70,8 +68,6 @@ namespace ScratchTicketSim.Customer
             }
         }
 
-        // ── Kunde spawnen ────────────────────────────────────────────────
-
         private void SpawnCustomer()
         {
             if (customerPrefab == null || spawnPoint == null) return;
@@ -85,14 +81,10 @@ namespace ScratchTicketSim.Customer
             AddToQueue(ai);
         }
 
-        // ── Warteschlange ────────────────────────────────────────────────
-
         public void AddToQueue(CustomerAI customer)
         {
             _queue.Add(customer);
             RefreshQueuePositions();
-
-            // Wenn Kasse frei, sofort bedienen
             if (_queue.Count == 1)
                 CashRegister.Instance?.ServeNextCustomer();
         }
@@ -101,8 +93,6 @@ namespace ScratchTicketSim.Customer
         {
             _queue.Remove(customer);
             RefreshQueuePositions();
-
-            // Nächsten Kunden bedienen
             if (_queue.Count > 0)
                 CashRegister.Instance?.ServeNextCustomer();
         }
@@ -120,12 +110,9 @@ namespace ScratchTicketSim.Customer
             }
         }
 
-        // ── Kundentyp-Verteilung ─────────────────────────────────────────
-
         private CustomerType GetRandomType()
         {
             float roll = Random.value;
-            // Regular 40%, Casual 25%, Gambler 20%, Impatient 10%, VIP 5%
             if (roll < 0.40f) return CustomerType.Regular;
             if (roll < 0.65f) return CustomerType.Casual;
             if (roll < 0.85f) return CustomerType.Gambler;
