@@ -1,7 +1,7 @@
 using UnityEngine;
 using UnityEngine.Events;
 
-namespace ScratchTicketSim.Core
+namespace ScratchTicketSim.Economy
 {
     /// <summary>
     /// Verwaltet alle Finanzen: Kontostand, Provisionen, Ausgaben und Tagesabrechnung.
@@ -29,25 +29,23 @@ namespace ScratchTicketSim.Core
 
         private void OnEnable()
         {
-            GameManager.Instance?.OnDayStart.AddListener(ResetDailyStats);
-            GameManager.Instance?.OnDayEnd.AddListener(PrintDailyReport);
+            Core.GameManager.Instance?.OnDayStart.AddListener(ResetDailyStats);
+            Core.GameManager.Instance?.OnDayEnd.AddListener(PrintDailyReport);
         }
 
         private void OnDisable()
         {
-            GameManager.Instance?.OnDayStart.RemoveListener(ResetDailyStats);
-            GameManager.Instance?.OnDayEnd.RemoveListener(PrintDailyReport);
+            Core.GameManager.Instance?.OnDayStart.RemoveListener(ResetDailyStats);
+            Core.GameManager.Instance?.OnDayEnd.RemoveListener(PrintDailyReport);
         }
-
-        // ── Öffentliche API ──────────────────────────────────────────────
 
         public float Balance => _balance;
 
         /// <summary>Fügt eine Einnahme hinzu (z.B. Provision).</summary>
         public void AddRevenue(float amount)
         {
-            _balance       += amount;
-            _dailyRevenue  += amount;
+            _balance      += amount;
+            _dailyRevenue += amount;
             OnBalanceChanged?.Invoke(_balance);
         }
 
@@ -59,21 +57,19 @@ namespace ScratchTicketSim.Core
                 Debug.LogWarning("[EconomyManager] Nicht genug Geld!");
                 return false;
             }
-            _balance        -= amount;
-            _dailyExpenses  += amount;
+            _balance       -= amount;
+            _dailyExpenses += amount;
             OnBalanceChanged?.Invoke(_balance);
             return true;
         }
 
         public void RegisterTicketSold() => _dailyTicketsSold++;
 
-        // ── Interne Methoden ─────────────────────────────────────────────
-
         private void ResetDailyStats()
         {
-            _dailyRevenue      = 0f;
-            _dailyExpenses     = 0f;
-            _dailyTicketsSold  = 0;
+            _dailyRevenue     = 0f;
+            _dailyExpenses    = 0f;
+            _dailyTicketsSold = 0;
         }
 
         private void PrintDailyReport()
